@@ -1,8 +1,12 @@
 <template>
-  <!-- Le style inline "height: 600px; width: 100%;" est un exemple, adaptez selon votre mise en page -->
+  <!-- Le style inline "height: 600px; width: 100%;" est un exemple de dimensions pour la grille -->
   <div style="height: 600px; width: 100%;">
+    <!-- 
+      Nous utilisons le nouveau Theming API avec "theme='alpine'".
+      Plus besoin de classe "ag-theme-alpine" ni d'import "ag-grid.css".
+    -->
     <ag-grid-vue3
-      theme="alpine"              <!-- IMPORTANT : indique qu'on utilise le nouveau thème Alpine -->
+      theme="alpine"         <!-- Nouveau Theming API -->
       :modules="modules"
       :columnDefs="columnDefs"
       :rowData="rowData"
@@ -11,15 +15,15 @@
       :pagination="true"
       :paginationPageSize="50"
       @grid-ready="onGridReady"
-    />
+    >
+    </ag-grid-vue3>
   </div>
 </template>
 
 <script>
 /**
- * IMPORTS
- * - Le composant AgGridVue depuis 'ag-grid-vue3'
- * - Les modules d'AG Grid Community depuis 'ag-grid-community'
+ * 1. Importation du composant AgGridVue depuis 'ag-grid-vue3'
+ * 2. Importation des modules nécessaires d'AG Grid Community
  */
 import { AgGridVue } from 'ag-grid-vue3';
 import {
@@ -34,8 +38,13 @@ import {
 } from 'ag-grid-community';
 
 /**
- * ENREGISTREMENT DES MODULES
- * On indique à AG Grid les fonctionnalités que nous allons utiliser.
+ * 3. Enregistrement des modules
+ *    Nous déclarons ici toutes les fonctionnalités dont nous avons besoin :
+ *    - Modèle de lignes côté client
+ *    - Pagination
+ *    - Filtres (texte, nombre, date)
+ *    - Édition inline (texte)
+ *    - Validation (optionnel pour voir les messages complets)
  */
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
@@ -56,7 +65,7 @@ export default {
     return {
       gridApi: null,
       gridColumnApi: null,
-      // Liste des modules à passer explicitement à la grille si souhaité
+      // Vous pouvez également passer ces modules explicitement à la grille, mais l'enregistrement global suffit
       modules: [
         ClientSideRowModelModule,
         ValidationModule,
@@ -66,20 +75,21 @@ export default {
         DateFilterModule,
         TextEditorModule,
       ],
-      // Définitions de colonnes
+      // Définition des colonnes
       columnDefs: [
         {
           headerName: 'ID',
           field: 'id',
           sortable: true,
-          filter: true,  // active un filtre (texte par défaut) => nécessite TextFilterModule (ou NumberFilter si c'est un ID numérique)
+          filter: true, // Active le filtre sur cette colonne => nécessite un FilterModule (TextFilter ou NumberFilter)
+          editable: false, 
         },
         {
           headerName: 'Nom',
           field: 'name',
           sortable: true,
           filter: true,
-          editable: true, // permet l'édition inline => nécessite TextEditorModule
+          editable: true, // Édition inline => nécessite TextEditorModule
         },
         {
           headerName: 'Email',
@@ -89,12 +99,12 @@ export default {
           editable: true,
         },
       ],
-      // Données de base pour illustration
+      // Données de test
       rowData: [
         { id: 1, name: 'Alice', email: 'alice@example.com' },
         { id: 2, name: 'Bob', email: 'bob@example.com' },
       ],
-      // Configuration par défaut de chaque colonne
+      // Configuration par défaut pour les colonnes
       defaultColDef: {
         flex: 1,
         minWidth: 100,
@@ -103,6 +113,9 @@ export default {
     };
   },
   methods: {
+    /**
+     * 4. Récupération de l'API de la grille lors de l'événement grid-ready
+     */
     onGridReady(params) {
       this.gridApi = params.api;
       this.gridColumnApi = params.columnApi;
@@ -112,9 +125,9 @@ export default {
 </script>
 
 <style>
-/* Import du thème Alpine (nouveau Theming API) */
+/* 5. Import du nouveau fichier de thème "theme-alpine.css" (Theming API de la v33 Community) */
 @import "ag-grid-community/styles/theme-alpine.css";
 
-/* Ici, vous n'importez PAS 'ag-grid.css' ni 'ag-theme-alpine.css' (legacy) */
+/* Aucun import de "ag-grid.css" ou d'anciennes feuilles de style */
 </style>
 
