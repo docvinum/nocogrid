@@ -1,12 +1,13 @@
 <template>
-  <!-- Le style inline "height: 600px; width: 100%;" est un exemple de dimensions pour la grille -->
+  <!-- Dimensions fixes pour illustrer, ajustez selon votre mise en page -->
   <div style="height: 600px; width: 100%;">
     <!-- 
-      Nous utilisons le nouveau Theming API avec "theme='alpine'".
-      Plus besoin de classe "ag-theme-alpine" ni d'import "ag-grid.css".
+      On reste en mode legacy : on applique la classe "ag-theme-alpine" 
+      et on précise theme="legacy" pour éviter tout conflit en v33
     -->
     <ag-grid-vue3
-      theme="alpine"         <!-- Nouveau Theming API -->
+      class="ag-theme-alpine"
+      theme="legacy"
       :modules="modules"
       :columnDefs="columnDefs"
       :rowData="rowData"
@@ -15,45 +16,35 @@
       :pagination="true"
       :paginationPageSize="50"
       @grid-ready="onGridReady"
-    >
-    </ag-grid-vue3>
+    />
   </div>
 </template>
 
 <script>
-/**
- * 1. Importation du composant AgGridVue depuis 'ag-grid-vue3'
- * 2. Importation des modules nécessaires d'AG Grid Community
- */
 import { AgGridVue } from 'ag-grid-vue3';
 import {
   ModuleRegistry,
+  // Modules obligatoires
   ClientSideRowModelModule,
-  ValidationModule,
+  // Pagination
   PaginationModule,
+  // Éventuels modules de filtres ou d’édition
   TextFilterModule,
   NumberFilterModule,
   DateFilterModule,
   TextEditorModule,
+  ValidationModule,
 } from 'ag-grid-community';
 
-/**
- * 3. Enregistrement des modules
- *    Nous déclarons ici toutes les fonctionnalités dont nous avons besoin :
- *    - Modèle de lignes côté client
- *    - Pagination
- *    - Filtres (texte, nombre, date)
- *    - Édition inline (texte)
- *    - Validation (optionnel pour voir les messages complets)
- */
+// On enregistre tous les modules nécessaires :
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
-  ValidationModule,
   PaginationModule,
   TextFilterModule,
   NumberFilterModule,
   DateFilterModule,
   TextEditorModule,
+  ValidationModule
 ]);
 
 export default {
@@ -65,46 +56,24 @@ export default {
     return {
       gridApi: null,
       gridColumnApi: null,
-      // Vous pouvez également passer ces modules explicitement à la grille, mais l'enregistrement global suffit
       modules: [
         ClientSideRowModelModule,
-        ValidationModule,
         PaginationModule,
         TextFilterModule,
         NumberFilterModule,
         DateFilterModule,
         TextEditorModule,
+        ValidationModule
       ],
-      // Définition des colonnes
       columnDefs: [
-        {
-          headerName: 'ID',
-          field: 'id',
-          sortable: true,
-          filter: true, // Active le filtre sur cette colonne => nécessite un FilterModule (TextFilter ou NumberFilter)
-          editable: false, 
-        },
-        {
-          headerName: 'Nom',
-          field: 'name',
-          sortable: true,
-          filter: true,
-          editable: true, // Édition inline => nécessite TextEditorModule
-        },
-        {
-          headerName: 'Email',
-          field: 'email',
-          sortable: true,
-          filter: true,
-          editable: true,
-        },
+        { headerName: 'ID', field: 'id', sortable: true, filter: true },
+        { headerName: 'Nom', field: 'name', sortable: true, filter: true, editable: true },
+        { headerName: 'Email', field: 'email', sortable: true, filter: true, editable: true },
       ],
-      // Données de test
       rowData: [
         { id: 1, name: 'Alice', email: 'alice@example.com' },
         { id: 2, name: 'Bob', email: 'bob@example.com' },
       ],
-      // Configuration par défaut pour les colonnes
       defaultColDef: {
         flex: 1,
         minWidth: 100,
@@ -113,9 +82,6 @@ export default {
     };
   },
   methods: {
-    /**
-     * 4. Récupération de l'API de la grille lors de l'événement grid-ready
-     */
     onGridReady(params) {
       this.gridApi = params.api;
       this.gridColumnApi = params.columnApi;
@@ -125,9 +91,8 @@ export default {
 </script>
 
 <style>
-/* 5. Import du nouveau fichier de thème "theme-alpine.css" (Theming API de la v33 Community) */
-@import "ag-grid-community/styles/theme-alpine.css";
-
-/* Aucun import de "ag-grid.css" ou d'anciennes feuilles de style */
+/* Importation du système de styles legacy : */
+@import "ag-grid-community/dist/styles/ag-grid.css";
+@import "ag-grid-community/dist/styles/ag-theme-alpine.css";
 </style>
 
