@@ -7,4 +7,3 @@ const app = createApp(App)
 
 app.use(Toast, { timeout: 3000 })
 app.mount('#app')
-

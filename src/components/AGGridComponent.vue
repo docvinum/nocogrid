@@ -1,7 +1,8 @@
 <template>
+  <!-- Le style inline "height: 600px; width: 100%;" est un exemple, adaptez selon votre mise en page -->
   <div style="height: 600px; width: 100%;">
     <ag-grid-vue3
-      theme="alpine"  <!-- utilisation du nouveau système de thème -->
+      theme="alpine"              <!-- IMPORTANT : indique qu'on utilise le nouveau thème Alpine -->
       :modules="modules"
       :columnDefs="columnDefs"
       :rowData="rowData"
@@ -10,11 +11,16 @@
       :pagination="true"
       :paginationPageSize="50"
       @grid-ready="onGridReady"
-    ></ag-grid-vue3>
+    />
   </div>
 </template>
 
 <script>
+/**
+ * IMPORTS
+ * - Le composant AgGridVue depuis 'ag-grid-vue3'
+ * - Les modules d'AG Grid Community depuis 'ag-grid-community'
+ */
 import { AgGridVue } from 'ag-grid-vue3';
 import {
   ModuleRegistry,
@@ -27,7 +33,10 @@ import {
   TextEditorModule,
 } from 'ag-grid-community';
 
-// On enregistre tous les modules nécessaires
+/**
+ * ENREGISTREMENT DES MODULES
+ * On indique à AG Grid les fonctionnalités que nous allons utiliser.
+ */
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   ValidationModule,
@@ -47,6 +56,7 @@ export default {
     return {
       gridApi: null,
       gridColumnApi: null,
+      // Liste des modules à passer explicitement à la grille si souhaité
       modules: [
         ClientSideRowModelModule,
         ValidationModule,
@@ -56,32 +66,35 @@ export default {
         DateFilterModule,
         TextEditorModule,
       ],
+      // Définitions de colonnes
       columnDefs: [
         {
-          headerName: "ID",
-          field: "id",
+          headerName: 'ID',
+          field: 'id',
           sortable: true,
-          filter: true,
+          filter: true,  // active un filtre (texte par défaut) => nécessite TextFilterModule (ou NumberFilter si c'est un ID numérique)
         },
         {
-          headerName: "Nom",
-          field: "name",
+          headerName: 'Nom',
+          field: 'name',
           sortable: true,
           filter: true,
-          editable: true,
+          editable: true, // permet l'édition inline => nécessite TextEditorModule
         },
         {
-          headerName: "Email",
-          field: "email",
+          headerName: 'Email',
+          field: 'email',
           sortable: true,
           filter: true,
           editable: true,
         },
       ],
+      // Données de base pour illustration
       rowData: [
-        { id: 1, name: "Alice", email: "alice@example.com" },
-        { id: 2, name: "Bob", email: "bob@example.com" },
+        { id: 1, name: 'Alice', email: 'alice@example.com' },
+        { id: 2, name: 'Bob', email: 'bob@example.com' },
       ],
+      // Configuration par défaut de chaque colonne
       defaultColDef: {
         flex: 1,
         minWidth: 100,
@@ -99,7 +112,9 @@ export default {
 </script>
 
 <style>
-/* Import du thème Alpine nouvelle génération */
+/* Import du thème Alpine (nouveau Theming API) */
 @import "ag-grid-community/styles/theme-alpine.css";
+
+/* Ici, vous n'importez PAS 'ag-grid.css' ni 'ag-theme-alpine.css' (legacy) */
 </style>
 
