@@ -105,8 +105,7 @@ export default defineComponent({
           // Optionnel: params: { limit: 25, offset: 0 }
         });
         console.log('Data response:', response.data);
-        // Supposons que la réponse contient une propriété "records" avec les enregistrements
-        rowData.value = response.data.records ? response.data.records : response.data;
+        rowData.value = response.data.list ? response.data.list : response.data;
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
           colDefs.value = keys.map(key => ({ field: key, headerName: key.toUpperCase() }));
