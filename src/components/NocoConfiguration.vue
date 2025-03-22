@@ -66,7 +66,7 @@ interface Table {
 }
 
 export default defineComponent({
-  name: 'Configuration',
+  name: 'NocoConfiguration',
   setup() {
     const router = useRouter();
     const apiUrl = ref('');

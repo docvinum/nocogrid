@@ -91,14 +91,15 @@ export default defineComponent({
 .grid-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: 80%;
   height: 100%;
+  margin:auto;
 }
 .actions {
   display: flex;
   padding: 0.5rem;
   gap: 1rem;
-  background-color: #f2f2f2;
+  background-color: #fff;
   height: 60px;
   align-items: center;
 }
