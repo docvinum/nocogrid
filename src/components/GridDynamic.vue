@@ -28,6 +28,8 @@
         :columnDefs="colDefs"
         :rowData="rowData"
         :defaultColDef="defaultColDef"
+        :rowHeight="30"
+        @grid-ready="onGridReady"
         @cellValueChanged="onCellValueChanged">
       </ag-grid-vue>
     </div>
@@ -70,15 +72,25 @@ export default defineComponent({
       editable: true,
     };
 
+    // Déclarez gridApi pour stocker l'instance de la grille
+    const gridApi = ref<any>(null);
+    // Fonction déclenchée lorsque la grille est prête
+    const onGridReady = (params: any) => {
+      gridApi.value = params.api;
+      // Ajuste la taille des colonnes pour remplir l'espace
+      params.api.sizeColumnsToFit();
+    };
+
     const fetchBases = async () => {
       if (!domain) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
       const url = `${normalizedDomain}/api/v2/meta/bases`;
       console.log('Fetching bases from:', url);
       try {
-        loading.value = true; // Début du chargement
+        loading.value = true;
         const response = await axios.get(url, {
           headers: { 'xc-token': token },
+          params: { limit: 25, offset: 0 },
         });
         console.log('Bases response:', response.data);
         bases.value = response.data.list || [];
@@ -120,8 +132,14 @@ export default defineComponent({
           headers: { 'xc-token': token },
         });
         console.log('Data response:', response.data);
-        // Utiliser response.data.list si disponible
         rowData.value = response.data.list ? response.data.list : response.data;
+        console.log('rowData after fetchData:', JSON.parse(JSON.stringify(rowData.value)));
+        
+        // Mettez à jour la grille avec setRowData
+        if (gridApi.value) {
+          gridApi.value.setRowData(rowData.value);
+        }
+        
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
           colDefs.value = keys.map(key => ({
@@ -137,11 +155,13 @@ export default defineComponent({
               return params.value;
             }
           }));
+          console.log('colDefs after generation:', JSON.parse(JSON.stringify(colDefs.value)));
         }
       } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
       }
     };
+
 
     const onCellValueChanged = (params: any) => {
       console.log('Valeur modifiée:', params.data);
@@ -165,6 +185,7 @@ export default defineComponent({
       onCellValueChanged,
       loading,
       errorMessage,
+      onGridReady  // Ajoutez ici pour l'utiliser dans le template
     };
   },
 });
@@ -175,7 +196,14 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  border: 1px solid red;
+  height: 100vh; /* hauteur fixe */
+  overflow: auto;
+}
+.grid-area {
+  flex-grow: 1;
+  border: 1px solid blue;
+  height: calc(100vh - 150px); /* ou un autre calcul pour réserver de l'espace */
 }
 .selection {
   padding: 1rem;
@@ -195,9 +223,6 @@ select {
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
-}
-.grid-area {
-  flex-grow: 1;
 }
 .loading {
   text-align: center;
