@@ -1,130 +1,112 @@
+<template>
+  <div class="grid-container">
+    <div class="actions">
+      <button @click="addRecord">Ajouter un enregistrement</button>
+      <button @click="syncOperations">Synchroniser</button>
+    </div>
+    <ag-grid-vue
+      class="ag-theme-alpine"
+      style="width: 100%; height: calc(100% - 60px);"
+      :columnDefs="colDefs"
+      :rowData="rowData"
+      :defaultColDef="defaultColDef"
+      @cellValueChanged="onCellValueChanged">
+    </ag-grid-vue>
+  </div>
+</template>
+
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import type { ColDef } from 'ag-grid-community';
-import axios from 'axios';
-import { db } from '../db';  // Importer notre base de données locale
-
-// Importation du type SyncOperation pour bénéficier du typage
-import type { SyncOperation } from '../db';
+import DeleteButton from './DeleteButton.vue';
 
 export default defineComponent({
-  name: 'Grid',
-  components: { AgGridVue },
+  name: 'GridStatic',
+  components: { AgGridVue, DeleteButton },
   setup() {
-    // Récupération des informations de configuration depuis le localStorage
-    const apiUrl = localStorage.getItem('nocodbApiUrl') || '';
-    const token = localStorage.getItem('nocodbToken') || '';
-    const baseId = localStorage.getItem('nocodbBaseId') || '';
-    const tableId = localStorage.getItem('nocodbTableId') || '';
+    // Données statiques de placeholder
+    const rowData = ref([
+      { id: 1, name: 'Alice', email: 'alice@example.com' },
+      { id: 2, name: 'Bob', email: 'bob@example.com' },
+      { id: 3, name: 'Charlie', email: 'charlie@example.com' },
+      { id: 4, name: 'Diana', email: 'diana@example.com' }
+    ]);
 
-    // Définitions des colonnes et données
-    const colDefs = ref<ColDef[]>([]);
-    const rowData = ref<any[]>([]);
+    // Fonction pour supprimer un enregistrement
+    const deleteRecord = (record: any) => {
+      rowData.value = rowData.value.filter(r => r.id !== record.id);
+      console.log('Enregistrement supprimé :', record);
+    };
+
+    // Colonnes définies statiquement, avec une colonne "Actions" utilisant le composant DeleteButton
+    const colDefs = ref<ColDef[]>([
+      { field: 'id', headerName: 'ID', editable: false },
+      { field: 'name', headerName: 'Name', editable: true },
+      { field: 'email', headerName: 'Email', editable: true },
+      {
+        headerName: 'Actions',
+        cellRenderer: DeleteButton,
+        cellRendererParams: { onDelete: deleteRecord },
+        editable: false,
+        sortable: false,
+        filter: false,
+      }
+    ]);
+
     const defaultColDef = {
       flex: 1,
       sortable: true,
       filter: true,
       resizable: true,
-      editable: true,
     };
 
-    // Fonction de récupération des données depuis l'API Nocodb v2
-    const fetchData = async () => {
-      try {
-        let normalizedApiUrl = apiUrl;
-        if (!normalizedApiUrl.endsWith('/')) {
-          normalizedApiUrl += '/';
-        }
-        const endpoint = `${normalizedApiUrl}db/data/${tableId}`;
-        const response = await axios.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        rowData.value = response.data;
-
-        // Enregistrer les données dans IndexedDB pour le mode offline
-        await db.records.clear();
-        const now = Date.now();
-        const recordsToAdd = rowData.value.map((item: any) => ({ data: item, lastUpdated: now }));
-        await db.records.bulkAdd(recordsToAdd);
-
-        if (rowData.value.length > 0) {
-          const keys = Object.keys(rowData.value[0]);
-          colDefs.value = keys.map((key) => ({ field: key, headerName: key.toUpperCase() }));
-        }
-      } catch (error) {
-        console.error('Erreur lors de la récupération via API :', error);
-        const cachedRecords = await db.records.toArray();
-        if (cachedRecords.length > 0) {
-          rowData.value = cachedRecords.map((record: { data: any }) => record.data);
-          if (rowData.value.length > 0) {
-            const keys = Object.keys(rowData.value[0]);
-            colDefs.value = keys.map((key) => ({ field: key, headerName: key.toUpperCase() }));
-          }
-        } else {
-          console.error("Aucune donnée en cache n'est disponible.");
-        }
-      }
+    // Fonction déclenchée lorsqu'une cellule est modifiée
+    const onCellValueChanged = (params: any) => {
+      console.log('Valeur modifiée :', params.data);
     };
 
-    // Gestion des modifications inline
-    const onCellValueChanged = async (params: any) => {
-      const updatedRecord = params.data;
-      try {
-        let normalizedApiUrl = apiUrl;
-        if (!normalizedApiUrl.endsWith('/')) {
-          normalizedApiUrl += '/';
-        }
-        const endpoint = `${normalizedApiUrl}db/data/${tableId}/${updatedRecord.id}`;
-        await axios.put(endpoint, updatedRecord, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log('Mise à jour réussie via API.');
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour via API :', error);
-        // Déclaration explicite de l'opération avec le type SyncOperation
-        const operation: SyncOperation = {
-          operation: 'update',
-          recordId: updatedRecord.id,
-          data: updatedRecord,
-          timestamp: Date.now(),
-        };
-        await db.syncQueue.add(operation);
-        console.log('Opération enregistrée dans la file d\'attente de synchronisation.');
-      }
+    // Fonction pour ajouter un nouvel enregistrement
+    const addRecord = () => {
+      const newId = rowData.value.length > 0 ? Math.max(...rowData.value.map(r => r.id)) + 1 : 1;
+      const newRecord = { id: newId, name: 'New User', email: 'new@example.com' };
+      rowData.value.push(newRecord);
+      console.log('Nouvel enregistrement ajouté :', newRecord);
     };
 
-    // Fonction de synchronisation pour traiter les opérations en attente
-    const syncOperations = async () => {
-      const pendingOps = await db.syncQueue.toArray();
-      for (const op of pendingOps) {
-        try {
-          let normalizedApiUrl = apiUrl;
-          if (!normalizedApiUrl.endsWith('/')) {
-            normalizedApiUrl += '/';
-          }
-          const endpoint = `${normalizedApiUrl}db/data/${tableId}/${op.recordId}`;
-          if (op.operation === 'update') {
-            await axios.put(endpoint, op.data, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-          }
-          // En cas de succès, supprimer l'opération de la file d'attente
-          if (op.id !== undefined) {
-            await db.syncQueue.delete(op.id);
-            console.log(`Opération ${op.id} synchronisée et supprimée de la file.`);
-          }
-        } catch (error) {
-          console.error('Erreur de synchronisation pour l\'opération', op, error);
-        }
-      }
+    // Fonction de synchronisation (exemple statique)
+    const syncOperations = () => {
+      console.log('Synchronisation simulée.');
     };
 
     onMounted(() => {
-      fetchData();
+      console.log('GridStatic monté avec données statiques');
     });
 
-    return { colDefs, rowData, defaultColDef, onCellValueChanged, syncOperations };
+    return { rowData, colDefs, defaultColDef, onCellValueChanged, addRecord, deleteRecord, syncOperations };
   },
 });
 </script>
+
+<style scoped>
+.grid-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+.actions {
+  display: flex;
+  padding: 0.5rem;
+  gap: 1rem;
+  background-color: #f2f2f2;
+  height: 60px;
+  align-items: center;
+}
+.ag-grid-vue {
+  flex-grow: 1;
+}
+button {
+  padding: 0.5rem 1rem;
+}
+</style>

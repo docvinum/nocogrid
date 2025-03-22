@@ -1,16 +1,14 @@
+// src/router/index.ts
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
-import Configuration from '../components/Configuration.vue';
-import Grid from '../components/Grid.vue';
+import GridStatic from '../components/GridStatic.vue';
 
 const routes: Array<RouteRecordRaw> = [
-  { path: '/', name: 'Configuration', component: Configuration },
-  { path: '/grid', name: 'Grid', component: Grid },
+  { path: '/', name: 'GridStatic', component: GridStatic },
 ];
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
+  history: createWebHistory(),
   routes,
 });
 
 export default router;
-
