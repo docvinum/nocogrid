@@ -57,7 +57,6 @@ html, body, #app {
   height: 100%;
 }
 /* Importer les styles d'AG Grid et le thème Alpine */
-@import "~ag-grid-community/styles/ag-grid.css";
 @import "~ag-grid-community/styles/ag-theme-alpine.css";
 </style>
 
