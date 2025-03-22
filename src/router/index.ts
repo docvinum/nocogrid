@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import NocoConfiguration from '../components/NocoConfiguration.vue';
-import GridStatic from '../components/GridStatic.vue'; // Votre composant de grille (ou Grid.vue)
+import GridDynamic from '../components/GridDynamic.vue'; // Mise à jour ici
 
 const routes: Array<RouteRecordRaw> = [
   { path: '/', name: 'NocoConfiguration', component: NocoConfiguration },
-  { path: '/grid', name: 'Grid', component: GridStatic },
+  { path: '/grid', name: 'Grid', component: GridDynamic },  // Vous pouvez garder la route nommée "Grid" ou la renommer
 ];
 
 const router = createRouter({

@@ -1,30 +1,5 @@
 <template>
-  <div class="config-container">
-    <h1>Configuration de NocoDB</h1>
-    <form @submit.prevent="submitConfig">
-      <div class="form-group">
-        <label for="apiUrl">NocoDB API URL</label>
-        <input
-          type="text"
-          id="apiUrl"
-          v-model="apiUrl"
-          placeholder="https://example.com/api/v2/"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="token">NocoDB API Token</label>
-        <input
-          type="text"
-          id="token"
-          v-model="token"
-          placeholder="Votre token ici"
-          required
-        />
-      </div>
-      <button type="submit">Enregistrer et continuer</button>
-    </form>
-  </div>
+  <router-view />
 </template>
 
 <script lang="ts">
@@ -43,7 +18,7 @@ export default defineComponent({
       localStorage.setItem('nocodbApiUrl', apiUrl.value);
       localStorage.setItem('nocodbToken', token.value);
       // Rediriger vers la page Grid (assurez-vous que la route Grid est définie)
-      router.push({ name: 'Grid' });
+      router.push({ name: 'GridDynamic' });
     };
 
     return { apiUrl, token, submitConfig };
