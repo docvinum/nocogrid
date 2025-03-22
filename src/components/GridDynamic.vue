@@ -20,7 +20,8 @@
         </select>
       </div>
     </div>
-    <div class="grid-area" v-if="rowData.length > 0">
+
+    <div class="grid-area">
       <ag-grid-vue
         class="ag-theme-alpine"
         style="width: 100%; height: calc(100% - 100px);"
@@ -30,6 +31,10 @@
         @cellValueChanged="onCellValueChanged">
       </ag-grid-vue>
     </div>
+    
+    <!-- Message de chargement ou d'erreur -->
+    <div v-if="loading" class="loading">Chargement...</div>
+    <div v-if="errorMessage" class="error">{{ errorMessage }}</div>
   </div>
 </template>
 
@@ -47,12 +52,16 @@ export default defineComponent({
     const domain = localStorage.getItem('nocodbDomain') || '';
     const token = localStorage.getItem('nocodbToken') || '';
 
+    // États
     const bases = ref<Array<{ id: string; title: string }>>([]);
     const tables = ref<Array<{ id: string; title: string }>>([]);
     const selectedBaseId = ref('');
     const selectedTableId = ref('');
     const rowData = ref<any[]>([]);
     const colDefs = ref<ColDef[]>([]);
+    const loading = ref(false);
+    const errorMessage = ref('');
+
     const defaultColDef = {
       flex: 1,
       sortable: true,
@@ -67,14 +76,17 @@ export default defineComponent({
       const url = `${normalizedDomain}/api/v2/meta/bases`;
       console.log('Fetching bases from:', url);
       try {
+        loading.value = true; // Début du chargement
         const response = await axios.get(url, {
           headers: { 'xc-token': token },
-          params: { limit: 25, offset: 0 },
         });
         console.log('Bases response:', response.data);
         bases.value = response.data.list || [];
+        loading.value = false;
       } catch (error) {
-        console.error('Erreur lors de la récupération des bases:', error);
+        errorMessage.value = 'Erreur lors de la récupération des bases.';
+        console.error('Erreur:', error);
+        loading.value = false;
       }
     };
 
@@ -84,13 +96,17 @@ export default defineComponent({
       const url = `${normalizedDomain}/api/v2/meta/bases/${selectedBaseId.value}/tables`;
       console.log('Fetching tables from:', url);
       try {
+        loading.value = true;
         const response = await axios.get(url, {
           headers: { 'xc-token': token },
         });
         console.log('Tables response:', response.data);
         tables.value = response.data.list || [];
+        loading.value = false;
       } catch (error) {
-        console.error('Erreur lors de la récupération des tables:', error);
+        errorMessage.value = 'Erreur lors de la récupération des tables.';
+        console.error('Erreur:', error);
+        loading.value = false;
       }
     };
 
@@ -102,13 +118,25 @@ export default defineComponent({
       try {
         const response = await axios.get(url, {
           headers: { 'xc-token': token },
-          // Optionnel: params: { limit: 25, offset: 0 }
         });
         console.log('Data response:', response.data);
+        // Utiliser response.data.list si disponible
         rowData.value = response.data.list ? response.data.list : response.data;
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
-          colDefs.value = keys.map(key => ({ field: key, headerName: key.toUpperCase() }));
+          colDefs.value = keys.map(key => ({
+            field: key,
+            headerName: key.toUpperCase(),
+            editable: true,
+            sortable: true,
+            filter: true,
+            valueFormatter: (params: any) => {
+              if (params.value && typeof params.value === 'object') {
+                return params.value.display_name ? params.value.display_name : JSON.stringify(params.value);
+              }
+              return params.value;
+            }
+          }));
         }
       } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
@@ -123,7 +151,21 @@ export default defineComponent({
       fetchBases();
     });
 
-    return { bases, tables, selectedBaseId, selectedTableId, rowData, colDefs, defaultColDef, fetchBases, fetchTables, fetchData, onCellValueChanged };
+    return {
+      bases,
+      tables,
+      selectedBaseId,
+      selectedTableId,
+      rowData,
+      colDefs,
+      defaultColDef,
+      fetchBases,
+      fetchTables,
+      fetchData,
+      onCellValueChanged,
+      loading,
+      errorMessage,
+    };
   },
 });
 </script>
@@ -156,5 +198,13 @@ select {
 }
 .grid-area {
   flex-grow: 1;
+}
+.loading {
+  text-align: center;
+  color: #007BFF;
+}
+.error {
+  text-align: center;
+  color: red;
 }
 </style>
