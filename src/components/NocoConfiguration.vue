@@ -54,7 +54,7 @@ export default defineComponent({
       console.log('Test connection URL:', testUrl);
       try {
         const response = await axios.get(testUrl, {
-          headers: { Authorization: `Bearer ${token.value}` },
+          headers: { 'xc-token': token.value },
         });
         console.log('Réponse de test:', response.data);
         // Extraire la liste des bases depuis response.data.list

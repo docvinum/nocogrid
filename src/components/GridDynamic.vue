@@ -15,7 +15,7 @@
         <select id="table" v-model="selectedTableId" @change="fetchData">
           <option disabled value="">Veuillez choisir une table</option>
           <option v-for="table in tables" :key="table.id" :value="table.id">
-            {{ table.name }}
+            {{ table.title }}
           </option>
         </select>
       </div>
@@ -36,8 +36,8 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
-import axios from 'axios';
 import type { ColDef } from 'ag-grid-community';
+import axios from 'axios';
 
 export default defineComponent({
   name: 'GridDynamic',
@@ -48,7 +48,7 @@ export default defineComponent({
     const token = localStorage.getItem('nocodbToken') || '';
 
     const bases = ref<Array<{ id: string; title: string }>>([]);
-    const tables = ref<Array<{ id: string; name: string }>>([]);
+    const tables = ref<Array<{ id: string; title: string }>>([]);
     const selectedBaseId = ref('');
     const selectedTableId = ref('');
     const rowData = ref<any[]>([]);
@@ -64,11 +64,12 @@ export default defineComponent({
     const fetchBases = async () => {
       if (!domain) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
-      const url = normalizedDomain + '/api/v2/meta/bases';
+      const url = `${normalizedDomain}/api/v2/meta/bases`;
       console.log('Fetching bases from:', url);
       try {
         const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 'xc-token': token },
+          params: { limit: 25, offset: 0 },
         });
         console.log('Bases response:', response.data);
         bases.value = response.data.list || [];
@@ -84,7 +85,7 @@ export default defineComponent({
       console.log('Fetching tables from:', url);
       try {
         const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 'xc-token': token },
         });
         console.log('Tables response:', response.data);
         tables.value = response.data.list || [];
@@ -96,14 +97,16 @@ export default defineComponent({
     const fetchData = async () => {
       if (!selectedTableId.value) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
-      const url = `${normalizedDomain}/api/v2/db/data/${selectedTableId.value}`;
+      const url = `${normalizedDomain}/api/v2/tables/${selectedTableId.value}/records`;
       console.log('Fetching data from:', url);
       try {
         const response = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 'xc-token': token },
+          // Optionnel: params: { limit: 25, offset: 0 }
         });
         console.log('Data response:', response.data);
-        rowData.value = response.data;
+        // Supposons que la réponse contient une propriété "records" avec les enregistrements
+        rowData.value = response.data.records ? response.data.records : response.data;
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
           colDefs.value = keys.map(key => ({ field: key, headerName: key.toUpperCase() }));
