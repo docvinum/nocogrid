@@ -76,8 +76,13 @@ export default defineComponent({
     const gridApi = ref<any>(null);
     // Fonction déclenchée lorsque la grille est prête
     const onGridReady = (params: any) => {
+      // Affectation de l'API
       gridApi.value = params.api;
-      // Ajuste la taille des colonnes pour remplir l'espace
+
+      // Log détaillé pour vérifier ce qu'on a
+      console.log('gridApi.value:', gridApi.value);
+      
+      // Ajustement éventuel des colonnes
       params.api.sizeColumnsToFit();
     };
 
@@ -135,11 +140,6 @@ export default defineComponent({
         rowData.value = response.data.list ? response.data.list : response.data;
         console.log('rowData after fetchData:', JSON.parse(JSON.stringify(rowData.value)));
         
-        // Mettez à jour la grille avec setRowData
-        if (gridApi.value) {
-          gridApi.value.setRowData(rowData.value);
-        }
-        
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
           colDefs.value = keys.map(key => ({
@@ -192,31 +192,35 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Conteneur principal : occupe toute la hauteur de la fenêtre */
 .grid-container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  border: 1px solid red;
-  height: 100vh; /* hauteur fixe */
-  overflow: auto;
+  height: 100vh;
 }
-.grid-area {
-  flex-grow: 1;
-  border: 1px solid blue;
-  height: calc(100vh - 150px); /* ou un autre calcul pour réserver de l'espace */
-}
+
+/* Section de sélection (dropdowns) : zone de configuration */
 .selection {
   padding: 1rem;
   background-color: #f9f9f9;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
+
+/* Groupes de formulaire */
 .form-group {
   margin-bottom: 1rem;
 }
+
+/* Étiquette de formulaire */
 label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: bold;
+  color: #333;
 }
+
+/* Style des dropdowns */
 select {
   width: 100%;
   padding: 0.5rem;
@@ -224,12 +228,24 @@ select {
   border-radius: 4px;
   box-sizing: border-box;
 }
-.loading {
+
+/* Zone de la grille : occupe tout l'espace restant */
+.grid-area {
+  flex-grow: 1;
+  overflow: auto;
+  background-color: #fff;
+}
+
+/* Messages de chargement et d'erreur */
+.loading, .error {
   text-align: center;
+  padding: 1rem;
+  font-weight: bold;
+}
+.loading {
   color: #007BFF;
 }
 .error {
-  text-align: center;
   color: red;
 }
 </style>
