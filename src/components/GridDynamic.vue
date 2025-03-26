@@ -1,45 +1,3 @@
-<template>
-  <div class="grid-container">
-    <div class="selection">
-      <div class="form-group">
-        <label for="base">Sélectionnez une base</label>
-        <select id="base" v-model="selectedBaseId" @change="fetchTables">
-          <option disabled value="">Veuillez choisir une base</option>
-          <option v-for="base in bases" :key="base.id" :value="base.id">
-            {{ base.title }}
-          </option>
-        </select>
-      </div>
-      <div class="form-group" v-if="tables.length > 0">
-        <label for="table">Sélectionnez une table</label>
-        <select id="table" v-model="selectedTableId" @change="fetchData">
-          <option disabled value="">Veuillez choisir une table</option>
-          <option v-for="table in tables" :key="table.id" :value="table.id">
-            {{ table.title }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <div class="grid-area">
-      <ag-grid-vue
-        class="ag-theme-alpine"
-        style="width: 100%; height: calc(100% - 100px);"
-        :columnDefs="colDefs"
-        :rowData="rowData"
-        :defaultColDef="defaultColDef"
-        :rowHeight="30"
-        @grid-ready="onGridReady"
-        @cellValueChanged="onCellValueChanged">
-      </ag-grid-vue>
-    </div>
-    
-    <!-- Indicateurs de chargement et messages d'erreur -->
-    <div v-if="loading" class="loading">Chargement...</div>
-    <div v-if="errorMessage" class="error">{{ errorMessage }}</div>
-  </div>
-</template>
-
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
@@ -54,7 +12,6 @@ export default defineComponent({
     const domain = localStorage.getItem('nocodbDomain') || '';
     const token = localStorage.getItem('nocodbToken') || '';
 
-    // États
     const bases = ref<Array<{ id: string; title: string }>>([]);
     const tables = ref<Array<{ id: string; title: string }>>([]);
     const selectedBaseId = ref(localStorage.getItem('nocodbSelectedBaseId') || '');
@@ -72,14 +29,43 @@ export default defineComponent({
       editable: true,
     };
 
-    // Pour accéder à l'API de la grille
     const gridApi = ref<any>(null);
+
+    // Fonction de sauvegarde de l'état de la grille
+    const saveGridState = () => {
+      if (!gridApi.value) return;
+      const columnState = gridApi.value.getColumnState();
+      const sortModel = gridApi.value.getSortModel();
+      const filterModel = gridApi.value.getFilterModel();
+      const gridState = { columnState, sortModel, filterModel };
+      localStorage.setItem('gridState', JSON.stringify(gridState));
+      console.log('Grid state saved:', gridState);
+    };
+
+    // Fonction de restauration de l'état de la grille
+    const restoreGridState = () => {
+      const savedState = localStorage.getItem('gridState');
+      if (savedState && gridApi.value) {
+        const { columnState, sortModel, filterModel } = JSON.parse(savedState);
+        gridApi.value.setColumnState(columnState);
+        gridApi.value.setSortModel(sortModel);
+        gridApi.value.setFilterModel(filterModel);
+        console.log('Grid state restored');
+      }
+    };
+
     const onGridReady = (params: any) => {
       gridApi.value = params.api;
       console.log('Grid ready. API:', gridApi.value);
-      if (rowData.value.length > 0) {
-        gridApi.value.sizeColumnsToFit();
-      }
+      // Restaurer l'état de la grille s'il existe
+      restoreGridState();
+      params.api.sizeColumnsToFit();
+
+      // Sauvegarder l'état dès que les colonnes sont déplacées ou redimensionnées, ou lorsque le tri/filtres changent
+      params.api.addEventListener('columnMoved', saveGridState);
+      params.api.addEventListener('columnResized', saveGridState);
+      params.api.addEventListener('sortChanged', saveGridState);
+      params.api.addEventListener('filterChanged', saveGridState);
     };
 
     const fetchBases = async () => {
@@ -134,7 +120,6 @@ export default defineComponent({
           headers: { 'xc-token': token },
         });
         console.log('Data response:', response.data);
-        // On utilise response.data.list si disponible
         rowData.value = response.data.list ? response.data.list : response.data;
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
@@ -168,7 +153,7 @@ export default defineComponent({
       console.log('Valeur modifiée:', params.data);
     };
 
-    // Stocker les sélections dans le localStorage via des watchers
+    // Conserver les sélections dans le localStorage
     watch(selectedBaseId, (newVal) => {
       localStorage.setItem('nocodbSelectedBaseId', newVal);
     });
@@ -178,11 +163,9 @@ export default defineComponent({
 
     onMounted(() => {
       fetchBases();
-      // Si une base était déjà sélectionnée, charger les tables
       if (selectedBaseId.value) {
         fetchTables();
       }
-      // Si une table était déjà sélectionnée, charger les données
       if (selectedTableId.value) {
         fetchData();
       }
