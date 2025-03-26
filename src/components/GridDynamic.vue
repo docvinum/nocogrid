@@ -41,7 +41,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, watch } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import type { ColDef } from 'ag-grid-community';
 import axios from 'axios';
@@ -50,15 +50,15 @@ export default defineComponent({
   name: 'GridDynamic',
   components: { AgGridVue },
   setup() {
-    // Récupération du domaine et du token depuis le localStorage
+    // Récupérer domaine et token depuis le localStorage
     const domain = localStorage.getItem('nocodbDomain') || '';
     const token = localStorage.getItem('nocodbToken') || '';
 
-    // États réactifs
+    // États
     const bases = ref<Array<{ id: string; title: string }>>([]);
     const tables = ref<Array<{ id: string; title: string }>>([]);
-    const selectedBaseId = ref('');
-    const selectedTableId = ref('');
+    const selectedBaseId = ref(localStorage.getItem('nocodbSelectedBaseId') || '');
+    const selectedTableId = ref(localStorage.getItem('nocodbSelectedTableId') || '');
     const rowData = ref<any[]>([]);
     const colDefs = ref<ColDef[]>([]);
     const loading = ref(false);
@@ -77,13 +77,11 @@ export default defineComponent({
     const onGridReady = (params: any) => {
       gridApi.value = params.api;
       console.log('Grid ready. API:', gridApi.value);
-      // Ajuster les colonnes si des données sont déjà chargées
       if (rowData.value.length > 0) {
         gridApi.value.sizeColumnsToFit();
       }
     };
 
-    // Récupère la liste des bases depuis l'API NocoDB v2
     const fetchBases = async () => {
       if (!domain) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
@@ -105,7 +103,6 @@ export default defineComponent({
       }
     };
 
-    // Récupère la liste des tables pour la base sélectionnée
     const fetchTables = async () => {
       if (!selectedBaseId.value) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
@@ -126,7 +123,6 @@ export default defineComponent({
       }
     };
 
-    // Récupère les enregistrements pour la table sélectionnée et génère dynamiquement les colonnes
     const fetchData = async () => {
       if (!selectedTableId.value) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
@@ -138,9 +134,8 @@ export default defineComponent({
           headers: { 'xc-token': token },
         });
         console.log('Data response:', response.data);
-        // Utiliser la propriété "list" pour récupérer les enregistrements
+        // On utilise response.data.list si disponible
         rowData.value = response.data.list ? response.data.list : response.data;
-        // Génération dynamique des colonnes à partir du premier enregistrement
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
           colDefs.value = keys.map(key => ({
@@ -157,7 +152,6 @@ export default defineComponent({
               return params.value;
             }
           }));
-          // Si la grille est déjà prête, ajuster la taille des colonnes
           if (gridApi.value) {
             gridApi.value.sizeColumnsToFit();
           }
@@ -174,13 +168,25 @@ export default defineComponent({
       console.log('Valeur modifiée:', params.data);
     };
 
-    // Au montage, récupérer la liste des bases
-    onMounted(() => {
-      fetchBases();
+    // Stocker les sélections dans le localStorage via des watchers
+    watch(selectedBaseId, (newVal) => {
+      localStorage.setItem('nocodbSelectedBaseId', newVal);
+    });
+    watch(selectedTableId, (newVal) => {
+      localStorage.setItem('nocodbSelectedTableId', newVal);
     });
 
-    // Optionnel : surveiller selectedTableId et charger les données automatiquement si la valeur change
-    // watch(selectedTableId, () => { if(selectedTableId.value) fetchData(); });
+    onMounted(() => {
+      fetchBases();
+      // Si une base était déjà sélectionnée, charger les tables
+      if (selectedBaseId.value) {
+        fetchTables();
+      }
+      // Si une table était déjà sélectionnée, charger les données
+      if (selectedTableId.value) {
+        fetchData();
+      }
+    });
 
     return {
       bases,
@@ -211,13 +217,18 @@ export default defineComponent({
 }
 
 .selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   padding: 1rem;
   background-color: #f9f9f9;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  gap: 1rem;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
 }
 
 label {
