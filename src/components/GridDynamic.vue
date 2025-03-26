@@ -41,7 +41,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch } from 'vue';
+import { defineComponent, ref, onMounted } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import type { ColDef } from 'ag-grid-community';
 import axios from 'axios';
