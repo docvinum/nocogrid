@@ -34,14 +34,14 @@
       </ag-grid-vue>
     </div>
     
-    <!-- Message de chargement ou d'erreur -->
+    <!-- Indicateurs de chargement et messages d'erreur -->
     <div v-if="loading" class="loading">Chargement...</div>
     <div v-if="errorMessage" class="error">{{ errorMessage }}</div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, watch } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import type { ColDef } from 'ag-grid-community';
 import axios from 'axios';
@@ -50,11 +50,11 @@ export default defineComponent({
   name: 'GridDynamic',
   components: { AgGridVue },
   setup() {
-    // Récupérer domaine et token depuis le localStorage
+    // Récupération du domaine et du token depuis le localStorage
     const domain = localStorage.getItem('nocodbDomain') || '';
     const token = localStorage.getItem('nocodbToken') || '';
 
-    // États
+    // États réactifs
     const bases = ref<Array<{ id: string; title: string }>>([]);
     const tables = ref<Array<{ id: string; title: string }>>([]);
     const selectedBaseId = ref('');
@@ -72,20 +72,18 @@ export default defineComponent({
       editable: true,
     };
 
-    // Déclarez gridApi pour stocker l'instance de la grille
+    // Pour accéder à l'API de la grille
     const gridApi = ref<any>(null);
-    // Fonction déclenchée lorsque la grille est prête
     const onGridReady = (params: any) => {
-      // Affectation de l'API
       gridApi.value = params.api;
-
-      // Log détaillé pour vérifier ce qu'on a
-      console.log('gridApi.value:', gridApi.value);
-      
-      // Ajustement éventuel des colonnes
-      params.api.sizeColumnsToFit();
+      console.log('Grid ready. API:', gridApi.value);
+      // Ajuster les colonnes si des données sont déjà chargées
+      if (rowData.value.length > 0) {
+        gridApi.value.sizeColumnsToFit();
+      }
     };
 
+    // Récupère la liste des bases depuis l'API NocoDB v2
     const fetchBases = async () => {
       if (!domain) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
@@ -107,6 +105,7 @@ export default defineComponent({
       }
     };
 
+    // Récupère la liste des tables pour la base sélectionnée
     const fetchTables = async () => {
       if (!selectedBaseId.value) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
@@ -127,19 +126,21 @@ export default defineComponent({
       }
     };
 
+    // Récupère les enregistrements pour la table sélectionnée et génère dynamiquement les colonnes
     const fetchData = async () => {
       if (!selectedTableId.value) return;
       const normalizedDomain = domain.endsWith('/') ? domain.slice(0, -1) : domain;
       const url = `${normalizedDomain}/api/v2/tables/${selectedTableId.value}/records`;
       console.log('Fetching data from:', url);
       try {
+        loading.value = true;
         const response = await axios.get(url, {
           headers: { 'xc-token': token },
         });
         console.log('Data response:', response.data);
+        // Utiliser la propriété "list" pour récupérer les enregistrements
         rowData.value = response.data.list ? response.data.list : response.data;
-        console.log('rowData after fetchData:', JSON.parse(JSON.stringify(rowData.value)));
-        
+        // Génération dynamique des colonnes à partir du premier enregistrement
         if (rowData.value.length > 0) {
           const keys = Object.keys(rowData.value[0]);
           colDefs.value = keys.map(key => ({
@@ -148,6 +149,7 @@ export default defineComponent({
             editable: true,
             sortable: true,
             filter: true,
+            width: 150,
             valueFormatter: (params: any) => {
               if (params.value && typeof params.value === 'object') {
                 return params.value.display_name ? params.value.display_name : JSON.stringify(params.value);
@@ -155,21 +157,30 @@ export default defineComponent({
               return params.value;
             }
           }));
-          console.log('colDefs after generation:', JSON.parse(JSON.stringify(colDefs.value)));
+          // Si la grille est déjà prête, ajuster la taille des colonnes
+          if (gridApi.value) {
+            gridApi.value.sizeColumnsToFit();
+          }
         }
+        loading.value = false;
       } catch (error) {
-        console.error('Erreur lors de la récupération des données:', error);
+        errorMessage.value = 'Erreur lors de la récupération des données.';
+        console.error('Erreur:', error);
+        loading.value = false;
       }
     };
-
 
     const onCellValueChanged = (params: any) => {
       console.log('Valeur modifiée:', params.data);
     };
 
+    // Au montage, récupérer la liste des bases
     onMounted(() => {
       fetchBases();
     });
+
+    // Optionnel : surveiller selectedTableId et charger les données automatiquement si la valeur change
+    // watch(selectedTableId, () => { if(selectedTableId.value) fetchData(); });
 
     return {
       bases,
@@ -185,14 +196,13 @@ export default defineComponent({
       onCellValueChanged,
       loading,
       errorMessage,
-      onGridReady  // Ajoutez ici pour l'utiliser dans le template
+      onGridReady,
     };
   },
 });
 </script>
 
 <style scoped>
-/* Conteneur principal : occupe toute la hauteur de la fenêtre */
 .grid-container {
   display: flex;
   flex-direction: column;
@@ -200,19 +210,16 @@ export default defineComponent({
   height: 100vh;
 }
 
-/* Section de sélection (dropdowns) : zone de configuration */
 .selection {
   padding: 1rem;
   background-color: #f9f9f9;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Groupes de formulaire */
 .form-group {
   margin-bottom: 1rem;
 }
 
-/* Étiquette de formulaire */
 label {
   display: block;
   margin-bottom: 0.5rem;
@@ -220,7 +227,6 @@ label {
   color: #333;
 }
 
-/* Style des dropdowns */
 select {
   width: 100%;
   padding: 0.5rem;
@@ -229,22 +235,23 @@ select {
   box-sizing: border-box;
 }
 
-/* Zone de la grille : occupe tout l'espace restant */
 .grid-area {
   flex-grow: 1;
   overflow: auto;
   background-color: #fff;
 }
 
-/* Messages de chargement et d'erreur */
-.loading, .error {
+.loading,
+.error {
   text-align: center;
   padding: 1rem;
   font-weight: bold;
 }
+
 .loading {
   color: #007BFF;
 }
+
 .error {
   color: red;
 }
